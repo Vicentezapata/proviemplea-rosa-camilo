@@ -1,0 +1,54 @@
+{
+  "name": "proviemplea-api",
+  "version": "1.0.0",
+  "description": "API backend para plataforma de intermediación laboral con búsqueda inversa, CV Ciego, gestión de empresas, solicitudes de contacto y seguimiento de procesos. La API considera paginación, filtros y manejo de errores para optimizar las operaciones CRUD. ",
+  "main": "index.js",
+  "scripts": {
+    "prestart": "npm install",
+    "start": "node index.js",
+    "migrate": "npx sequelize-cli db:migrate",
+    "seed": "npx sequelize-cli db:seed:all",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo:all",
+    "setup:prod": "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"
+  },
+  "keywords": [
+    "openapi-generator",
+    "openapi"
+  ],
+  "license": "Unlicense",
+  "private": true,
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "body-parser": "^1.19.0",
+    "camelcase": "^5.3.1",
+    "cookie-parser": "^1.4.4",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^4.16.4",
+    "express-openapi-validator": "^4.13.8",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.1.0",
+    "js-yaml": "^3.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.3",
+    "ono": "^5.0.1",
+    "openapi-sampler": "^1.0.0-beta.15",
+    "sequelize": "^6.37.8",
+    "sequelize-cli": "^6.6.5",
+    "swagger-ui-express": "^4.0.2",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.17.2",
+    "mocha": "^7.1.1"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    }
+  }
+}

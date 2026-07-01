@@ -1,0 +1,2375 @@
+openapi: 3.0.3
+info:
+  description: |
+    API backend para plataforma de intermediación laboral con búsqueda inversa, CV Ciego, gestión de empresas, solicitudes de contacto y seguimiento de procesos. La API considera paginación, filtros y manejo de errores para optimizar las operaciones CRUD.
+  title: ProviEmplea API
+  version: 1.0.0
+servers:
+- description: Servidor local de desarrollo
+  url: http://localhost:3000/api
+tags:
+- description: Estado general de la API
+  name: Sistema
+- description: Gestión de perfiles laborales y CV Ciego
+  name: Talentos
+- description: Gestión de empresas registradas y validadas
+  name: Empresas
+- description: Solicitudes de contacto entre empresas y talentos
+  name: Solicitudes
+- description: Seguimiento de procesos de selección
+  name: Seguimientos
+- description: Opciones reutilizables del sistema
+  name: Catalogos
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: ProviEmplea API funcionando correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: API funcionando correctamente
+      summary: Verifica el estado de la API
+      tags:
+      - Sistema
+      x-eov-operation-handler: controllers/SistemaController
+  /talentos:
+    get:
+      description: |
+        Retorna talentos visibles para empresas, ocultando datos personales y sociodemográficos como nombre, rut, correo, teléfono, dirección, fecha de nacimiento, género y comuna. Incluye filtros y paginación para mejorar rendimiento.
+      operationId: listarTalentos
+      parameters:
+      - explode: true
+        in: query
+        name: estado_perfil
+        required: false
+        schema:
+          example: validado
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: area_profesional
+        required: false
+        schema:
+          example: Tecnología
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: discapacidad_ley_21015
+        required: false
+        schema:
+          example: true
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: pretension_renta_max
+        required: false
+        schema:
+          example: 900000
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          example: 10
+          maximum: 100
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentosPaginados"
+          description: Lista de talentos obtenida correctamente
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Lista talentos aplicando CV Ciego
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+    post:
+      operationId: crearTalento
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+          description: Talento creado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Ya existe un talento con ese correo o rut
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Crea un nuevo talento
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+  /talentos/{id}:
+    delete:
+      operationId: eliminarTalento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Talento eliminado correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: Talento eliminado o desactivado correctamente
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Talento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Elimina lógicamente un talento
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+    get:
+      operationId: obtenerTalentoPorId
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+          description: Talento encontrado
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Talento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Obtiene un talento por ID
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+    put:
+      operationId: actualizarTalento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+          description: Talento actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Talento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Actualiza completamente un talento
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+  /talentos/{id}/estado:
+    patch:
+      operationId: cambiarEstadoTalento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoEstadoPatch"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+          description: Estado actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Estado inválido
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Talento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Cambia el estado del perfil de un talento
+      tags:
+      - Talentos
+      x-eov-operation-handler: controllers/TalentosController
+  /empresas:
+    get:
+      description: "Retorna empresas con filtros por estado de validación, rubro y\
+        \ paginación."
+      operationId: listarEmpresas
+      parameters:
+      - explode: true
+        in: query
+        name: estado_validacion
+        required: false
+        schema:
+          example: validada
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: rubro
+        required: false
+        schema:
+          example: Tecnología
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          example: 10
+          maximum: 100
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresasPaginadas"
+          description: Empresas obtenidas correctamente
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Lista empresas registradas
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+    post:
+      operationId: crearEmpresa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+          description: Empresa creada correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Ya existe una empresa con ese RUT o correo
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Crea una nueva empresa
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+  /empresas/{id}:
+    delete:
+      operationId: eliminarEmpresa
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Empresa eliminada correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: Empresa eliminada correctamente
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Empresa no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Elimina lógicamente una empresa
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+    get:
+      operationId: obtenerEmpresaPorId
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+          description: Empresa encontrada
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Empresa no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Obtiene una empresa por ID
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+    put:
+      operationId: actualizarEmpresa
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+          description: Empresa actualizada correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Empresa no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Actualiza completamente una empresa
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+  /empresas/{id}/validacion:
+    patch:
+      operationId: cambiarValidacionEmpresa
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaValidacionPatch"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+          description: Validación actualizada correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Estado inválido
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Empresa no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Cambia el estado de validación de una empresa
+      tags:
+      - Empresas
+      x-eov-operation-handler: controllers/EmpresasController
+  /solicitudes:
+    get:
+      description: "Retorna solicitudes con filtros por empresa, talento, estado y\
+        \ paginación."
+      operationId: listarSolicitudes
+      parameters:
+      - explode: true
+        in: query
+        name: empresa_id
+        required: false
+        schema:
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: talento_id
+        required: false
+        schema:
+          example: 2
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: estado_solicitud
+        required: false
+        schema:
+          example: pendiente
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          example: 10
+          maximum: 100
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudesPaginadas"
+          description: Solicitudes obtenidas correctamente
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Lista solicitudes de contacto
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+    post:
+      description: No permite solicitud pendiente duplicada para la misma empresa
+        y talento.
+      operationId: crearSolicitud
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudContactoCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+          description: Solicitud creada correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Empresa o talento no encontrado
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Ya existe una solicitud pendiente para esa empresa y talento
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Crea una solicitud de contacto de empresa hacia talento
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+  /solicitudes/{id}:
+    delete:
+      operationId: eliminarSolicitud
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Solicitud eliminada correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: Solicitud eliminada correctamente
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Solicitud no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Elimina lógicamente una solicitud
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+    get:
+      operationId: obtenerSolicitudPorId
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+          description: Solicitud encontrada
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Solicitud no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Obtiene una solicitud por ID
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+    put:
+      operationId: actualizarSolicitud
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudContactoUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+          description: Solicitud actualizada correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Solicitud no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Actualiza completamente una solicitud
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+  /solicitudes/{id}/estado:
+    patch:
+      operationId: cambiarEstadoSolicitud
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudEstadoPatch"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+          description: Estado de solicitud actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Estado inválido
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Solicitud no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Cambia el estado de una solicitud de contacto
+      tags:
+      - Solicitudes
+      x-eov-operation-handler: controllers/SolicitudesController
+  /seguimientos:
+    get:
+      operationId: listarSeguimientos
+      parameters:
+      - explode: true
+        in: query
+        name: solicitud_contacto_id
+        required: false
+        schema:
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: empresa_id
+        required: false
+        schema:
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: talento_id
+        required: false
+        schema:
+          example: 2
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: estado_seguimiento
+        required: false
+        schema:
+          example: entrevista
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          example: 10
+          maximum: 100
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientosPaginados"
+          description: Seguimientos obtenidos correctamente
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Lista seguimientos de procesos de selección
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+    post:
+      operationId: crearSeguimiento
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+          description: Seguimiento creado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Solicitud no encontrada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Crea un seguimiento asociado a una solicitud
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+  /seguimientos/{id}:
+    delete:
+      operationId: eliminarSeguimiento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Seguimiento eliminado correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: Seguimiento eliminado correctamente
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Seguimiento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Elimina lógicamente un seguimiento
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+    get:
+      operationId: obtenerSeguimientoPorId
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+          description: Seguimiento encontrado
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Seguimiento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Obtiene un seguimiento por ID
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+    put:
+      operationId: actualizarSeguimiento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+          description: Seguimiento actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Seguimiento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Actualiza completamente un seguimiento
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+  /seguimientos/{id}/estado:
+    patch:
+      operationId: cambiarEstadoSeguimiento
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoEstadoPatch"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+          description: Estado de seguimiento actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Estado inválido
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Seguimiento no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Cambia el estado o etapa de un seguimiento
+      tags:
+      - Seguimientos
+      x-eov-operation-handler: controllers/SeguimientosController
+  /catalogos:
+    get:
+      description: "Permite obtener opciones reutilizables como estados, rubros, modalidades,\
+        \ jornadas, idiomas y roles."
+      operationId: listarCatalogos
+      parameters:
+      - explode: true
+        in: query
+        name: tipo
+        required: false
+        schema:
+          example: estado_perfil
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: activo
+        required: false
+        schema:
+          example: true
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          example: 1
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          example: 10
+          maximum: 100
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogosPaginados"
+          description: Catálogos obtenidos correctamente
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Lista catálogos del sistema
+      tags:
+      - Catalogos
+      x-eov-operation-handler: controllers/CatalogosController
+    post:
+      operationId: crearCatalogo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogoCreate"
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+          description: Catálogo creado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Ya existe un catálogo con ese tipo y nombre
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Crea un nuevo registro de catálogo
+      tags:
+      - Catalogos
+      x-eov-operation-handler: controllers/CatalogosController
+  /catalogos/{id}:
+    delete:
+      operationId: eliminarCatalogo
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Catálogo eliminado correctamente
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+          description: Catálogo eliminado correctamente
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Catálogo no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Elimina lógicamente un catálogo
+      tags:
+      - Catalogos
+      x-eov-operation-handler: controllers/CatalogosController
+    get:
+      operationId: obtenerCatalogoPorId
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+          description: Catálogo encontrado
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Catálogo no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Obtiene un catálogo por ID
+      tags:
+      - Catalogos
+      x-eov-operation-handler: controllers/CatalogosController
+    put:
+      operationId: actualizarCatalogo
+      parameters:
+      - explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          example: 1
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogoUpdate"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+          description: Catálogo actualizado correctamente
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Datos inválidos
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Catálogo no encontrado
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+          description: Error interno del servidor
+      summary: Actualiza completamente un catálogo
+      tags:
+      - Catalogos
+      x-eov-operation-handler: controllers/CatalogosController
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdPath:
+      explode: false
+      in: path
+      name: id
+      required: true
+      schema:
+        example: 1
+        type: integer
+      style: simple
+  schemas:
+    MensajeRespuesta:
+      example:
+        message: Operación realizada correctamente
+        status: ok
+      properties:
+        status:
+          example: ok
+          type: string
+        message:
+          example: Operación realizada correctamente
+          type: string
+      type: object
+    Error:
+      example:
+        message: Ocurrió un error en la solicitud
+        status: error
+      properties:
+        status:
+          example: error
+          type: string
+        message:
+          example: Ocurrió un error en la solicitud
+          type: string
+      type: object
+    TalentoCompleto:
+      example:
+        fecha_nacimiento: 1995-05-10
+        nombre: Camila Torres
+        rut: 12345678-9
+        condiciones_laborales: "Jornada completa, modalidad híbrida."
+        nivel_educacional: Técnico nivel superior
+        codigo_talento: TAL-0001
+        correo: camila@example.com
+        genero: Femenino
+        id: 1
+        area_profesional: Administración
+        telefono: "+56912345678"
+        estado_perfil: validado
+        competencias_tecnicas: "Excel, atención al cliente, gestión documental."
+        direccion: Av. Providencia 1234
+        pretension_renta: 800000
+        porcentaje_completitud: 90
+        resumen_profesional: Profesional con experiencia en atención de clientes y
+          administración.
+        idiomas: Inglés nivel intermedio.
+        validado_por: Administrador Departamento de Empleo
+        discapacidad_ley_21015: true
+        experiencia_laboral: 3 años en atención de público y gestión administrativa.
+        comuna: Providencia
+        observacion_validacion: Perfil aprobado para vitrina laboral.
+        portafolio_url: https://portafolio.example.com/talento1
+        activo: true
+      properties:
+        id:
+          example: 1
+          type: integer
+        codigo_talento:
+          example: TAL-0001
+          type: string
+        rut:
+          example: 12345678-9
+          type: string
+        nombre:
+          example: Camila Torres
+          type: string
+        correo:
+          example: camila@example.com
+          type: string
+        telefono:
+          example: "+56912345678"
+          type: string
+        direccion:
+          example: Av. Providencia 1234
+          type: string
+        fecha_nacimiento:
+          example: 1995-05-10
+          format: date
+          type: string
+        genero:
+          example: Femenino
+          type: string
+        comuna:
+          example: Providencia
+          type: string
+        resumen_profesional:
+          example: Profesional con experiencia en atención de clientes y administración.
+          type: string
+        area_profesional:
+          example: Administración
+          type: string
+        nivel_educacional:
+          example: Técnico nivel superior
+          type: string
+        experiencia_laboral:
+          example: 3 años en atención de público y gestión administrativa.
+          type: string
+        competencias_tecnicas:
+          example: "Excel, atención al cliente, gestión documental."
+          type: string
+        idiomas:
+          example: Inglés nivel intermedio.
+          type: string
+        portafolio_url:
+          example: https://portafolio.example.com/talento1
+          type: string
+        discapacidad_ley_21015:
+          example: true
+          type: boolean
+        condiciones_laborales:
+          example: "Jornada completa, modalidad híbrida."
+          type: string
+        pretension_renta:
+          example: 800000
+          type: integer
+        estado_perfil:
+          example: validado
+          type: string
+        porcentaje_completitud:
+          example: 90
+          type: integer
+        observacion_validacion:
+          example: Perfil aprobado para vitrina laboral.
+          type: string
+        validado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+        activo:
+          example: true
+          type: boolean
+      type: object
+    TalentoCiego:
+      description: "Versión del talento visible para empresas, sin datos personales\
+        \ ni sociodemográficos."
+      example:
+        estado_perfil: validado
+        competencias_tecnicas: "Excel, atención al cliente, gestión documental."
+        pretension_renta: 800000
+        resumen_profesional: Profesional con experiencia en atención de clientes y
+          administración.
+        idiomas: Inglés nivel intermedio.
+        condiciones_laborales: "Jornada completa, modalidad híbrida."
+        nivel_educacional: Técnico nivel superior
+        codigo_talento: TAL-0001
+        discapacidad_ley_21015: true
+        experiencia_laboral: 3 años en atención de público y gestión administrativa.
+        id: 1
+        area_profesional: Administración
+        portafolio_url: https://portafolio.example.com/talento1
+      properties:
+        id:
+          example: 1
+          type: integer
+        codigo_talento:
+          example: TAL-0001
+          type: string
+        resumen_profesional:
+          example: Profesional con experiencia en atención de clientes y administración.
+          type: string
+        area_profesional:
+          example: Administración
+          type: string
+        nivel_educacional:
+          example: Técnico nivel superior
+          type: string
+        experiencia_laboral:
+          example: 3 años en atención de público y gestión administrativa.
+          type: string
+        competencias_tecnicas:
+          example: "Excel, atención al cliente, gestión documental."
+          type: string
+        idiomas:
+          example: Inglés nivel intermedio.
+          type: string
+        portafolio_url:
+          example: https://portafolio.example.com/talento1
+          type: string
+        discapacidad_ley_21015:
+          example: true
+          type: boolean
+        condiciones_laborales:
+          example: "Jornada completa, modalidad híbrida."
+          type: string
+        pretension_renta:
+          example: 800000
+          type: integer
+        estado_perfil:
+          example: validado
+          type: string
+        porcentaje_completitud:
+          example: 90
+          type: integer
+        activo:
+          example: true
+          type: boolean
+      type: object
+    TalentoCreate:
+      example:
+        competencias_tecnicas: "Excel, atención al cliente."
+        direccion: Av. Providencia 1234
+        fecha_nacimiento: 1995-05-10
+        pretension_renta: 800000
+        nombre: Camila Torres
+        resumen_profesional: Profesional con experiencia en atención de clientes y
+          administración.
+        rut: 12345678-9
+        idiomas: Inglés intermedio.
+        condiciones_laborales: "Jornada completa, modalidad híbrida."
+        nivel_educacional: Técnico nivel superior
+        discapacidad_ley_21015: true
+        experiencia_laboral: 3 años en atención de público.
+        correo: camila@example.com
+        genero: Femenino
+        comuna: Providencia
+        area_profesional: Administración
+        telefono: "+56912345678"
+        portafolio_url: https://portafolio.example.com/talento1
+      properties:
+        rut:
+          example: 12345678-9
+          type: string
+        nombre:
+          example: Camila Torres
+          type: string
+        correo:
+          example: camila@example.com
+          type: string
+        telefono:
+          example: "+56912345678"
+          type: string
+        direccion:
+          example: Av. Providencia 1234
+          type: string
+        fecha_nacimiento:
+          example: 1995-05-10
+          format: date
+          type: string
+        genero:
+          example: Femenino
+          type: string
+        comuna:
+          example: Providencia
+          type: string
+        resumen_profesional:
+          example: Profesional con experiencia en atención de clientes y administración.
+          type: string
+        area_profesional:
+          example: Administración
+          type: string
+        nivel_educacional:
+          example: Técnico nivel superior
+          type: string
+        experiencia_laboral:
+          example: 3 años en atención de público.
+          type: string
+        competencias_tecnicas:
+          example: "Excel, atención al cliente."
+          type: string
+        idiomas:
+          example: Inglés intermedio.
+          type: string
+        portafolio_url:
+          example: https://portafolio.example.com/talento1
+          type: string
+        discapacidad_ley_21015:
+          example: true
+          type: boolean
+        condiciones_laborales:
+          example: "Jornada completa, modalidad híbrida."
+          type: string
+        pretension_renta:
+          example: 800000
+          type: integer
+      required:
+      - area_profesional
+      - correo
+      - nombre
+      - resumen_profesional
+      - rut
+      type: object
+    TalentoUpdate:
+      allOf:
+      - $ref: "#/components/schemas/TalentoCreate"
+      - properties:
+          estado_perfil:
+            example: validado
+            type: string
+          porcentaje_completitud:
+            example: 90
+            type: integer
+          observacion_validacion:
+            example: Perfil revisado y validado.
+            type: string
+          activo:
+            example: true
+            type: boolean
+        type: object
+      example:
+        estado_perfil: validado
+        competencias_tecnicas: "Excel, atención al cliente."
+        direccion: Av. Providencia 1234
+        fecha_nacimiento: 1995-05-10
+        pretension_renta: 800000
+        porcentaje_completitud: 90
+        nombre: Camila Torres
+        resumen_profesional: Profesional con experiencia en atención de clientes y
+          administración.
+        rut: 12345678-9
+        idiomas: Inglés intermedio.
+        condiciones_laborales: "Jornada completa, modalidad híbrida."
+        nivel_educacional: Técnico nivel superior
+        discapacidad_ley_21015: true
+        experiencia_laboral: 3 años en atención de público.
+        correo: camila@example.com
+        genero: Femenino
+        comuna: Providencia
+        area_profesional: Administración
+        telefono: "+56912345678"
+        observacion_validacion: Perfil revisado y validado.
+        portafolio_url: https://portafolio.example.com/talento1
+        activo: true
+    TalentoEstadoPatch:
+      example:
+        estado_perfil: validado
+        validado_por: Administrador Departamento de Empleo
+        observacion_validacion: Perfil revisado y aprobado para vitrina laboral.
+      properties:
+        estado_perfil:
+          example: validado
+          type: string
+        observacion_validacion:
+          example: Perfil revisado y aprobado para vitrina laboral.
+          type: string
+        validado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+      required:
+      - estado_perfil
+      type: object
+    TalentosPaginados:
+      example:
+        total: 25
+        data:
+        - estado_perfil: validado
+          competencias_tecnicas: "Excel, atención al cliente, gestión documental."
+          pretension_renta: 800000
+          resumen_profesional: Profesional con experiencia en atención de clientes
+            y administración.
+          idiomas: Inglés nivel intermedio.
+          condiciones_laborales: "Jornada completa, modalidad híbrida."
+          nivel_educacional: Técnico nivel superior
+          codigo_talento: TAL-0001
+          discapacidad_ley_21015: true
+          experiencia_laboral: 3 años en atención de público y gestión administrativa.
+          id: 1
+          area_profesional: Administración
+          portafolio_url: https://portafolio.example.com/talento1
+        - estado_perfil: validado
+          competencias_tecnicas: "Excel, atención al cliente, gestión documental."
+          pretension_renta: 800000
+          resumen_profesional: Profesional con experiencia en atención de clientes
+            y administración.
+          idiomas: Inglés nivel intermedio.
+          condiciones_laborales: "Jornada completa, modalidad híbrida."
+          nivel_educacional: Técnico nivel superior
+          codigo_talento: TAL-0001
+          discapacidad_ley_21015: true
+          experiencia_laboral: 3 años en atención de público y gestión administrativa.
+          id: 1
+          area_profesional: Administración
+          portafolio_url: https://portafolio.example.com/talento1
+        limit: 10
+        page: 1
+      properties:
+        page:
+          example: 1
+          type: integer
+        limit:
+          example: 10
+          type: integer
+        total:
+          example: 25
+          type: integer
+        data:
+          items:
+            $ref: "#/components/schemas/TalentoCiego"
+          type: array
+      type: object
+    EmpresaCompleta:
+      example:
+        tipo_empresa: Contratación directa
+        rubro: Tecnología
+        contactos_empresa: "RRHH principal: rrhh@empresa.cl, +56911112222"
+        direccion: Av. Nueva Providencia 1881
+        presentacion: Empresa dedicada al desarrollo de soluciones digitales.
+        estado_validacion: validada
+        validado_por: Administrador Departamento de Empleo
+        rut_empresa: 76123456-7
+        nombre_empresa: Servicios Digitales Providencia SpA
+        correo: contacto@empresa.cl
+        id: 1
+        telefono: "+56223456789"
+        observacion_validacion: Empresa aprobada para solicitar contacto con talentos.
+        beneficios: "Seguro complementario, modalidad híbrida, capacitación."
+        activo: true
+      properties:
+        id:
+          example: 1
+          type: integer
+        rut_empresa:
+          example: 76123456-7
+          type: string
+        nombre_empresa:
+          example: Servicios Digitales Providencia SpA
+          type: string
+        correo:
+          example: contacto@empresa.cl
+          type: string
+        telefono:
+          example: "+56223456789"
+          type: string
+        direccion:
+          example: Av. Nueva Providencia 1881
+          type: string
+        rubro:
+          example: Tecnología
+          type: string
+        tipo_empresa:
+          example: Contratación directa
+          type: string
+        presentacion:
+          example: Empresa dedicada al desarrollo de soluciones digitales.
+          type: string
+        beneficios:
+          example: "Seguro complementario, modalidad híbrida, capacitación."
+          type: string
+        contactos_empresa:
+          example: "RRHH principal: rrhh@empresa.cl, +56911112222"
+          type: string
+        estado_validacion:
+          example: validada
+          type: string
+        observacion_validacion:
+          example: Empresa aprobada para solicitar contacto con talentos.
+          type: string
+        validado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+        activo:
+          example: true
+          type: boolean
+      type: object
+    EmpresaCreate:
+      example:
+        tipo_empresa: Contratación directa
+        rubro: Tecnología
+        rut_empresa: 76123456-7
+        contactos_empresa: "RRHH principal: rrhh@empresa.cl, +56911112222"
+        nombre_empresa: Servicios Digitales Providencia SpA
+        correo: contacto@empresa.cl
+        direccion: Av. Nueva Providencia 1881
+        presentacion: Empresa dedicada al desarrollo de soluciones digitales.
+        telefono: "+56223456789"
+        beneficios: "Seguro complementario, modalidad híbrida, capacitación."
+      properties:
+        rut_empresa:
+          example: 76123456-7
+          type: string
+        nombre_empresa:
+          example: Servicios Digitales Providencia SpA
+          type: string
+        correo:
+          example: contacto@empresa.cl
+          type: string
+        telefono:
+          example: "+56223456789"
+          type: string
+        direccion:
+          example: Av. Nueva Providencia 1881
+          type: string
+        rubro:
+          example: Tecnología
+          type: string
+        tipo_empresa:
+          example: Contratación directa
+          type: string
+        presentacion:
+          example: Empresa dedicada al desarrollo de soluciones digitales.
+          type: string
+        beneficios:
+          example: "Seguro complementario, modalidad híbrida, capacitación."
+          type: string
+        contactos_empresa:
+          example: "RRHH principal: rrhh@empresa.cl, +56911112222"
+          type: string
+      required:
+      - correo
+      - nombre_empresa
+      - rubro
+      - rut_empresa
+      type: object
+    EmpresaUpdate:
+      allOf:
+      - $ref: "#/components/schemas/EmpresaCreate"
+      - properties:
+          estado_validacion:
+            example: validada
+            type: string
+          observacion_validacion:
+            example: Empresa revisada por administración.
+            type: string
+          activo:
+            example: true
+            type: boolean
+        type: object
+      example:
+        tipo_empresa: Contratación directa
+        rubro: Tecnología
+        contactos_empresa: "RRHH principal: rrhh@empresa.cl, +56911112222"
+        direccion: Av. Nueva Providencia 1881
+        presentacion: Empresa dedicada al desarrollo de soluciones digitales.
+        estado_validacion: validada
+        rut_empresa: 76123456-7
+        nombre_empresa: Servicios Digitales Providencia SpA
+        correo: contacto@empresa.cl
+        telefono: "+56223456789"
+        observacion_validacion: Empresa revisada por administración.
+        beneficios: "Seguro complementario, modalidad híbrida, capacitación."
+        activo: true
+    EmpresaValidacionPatch:
+      example:
+        estado_validacion: validada
+        validado_por: Administrador Departamento de Empleo
+        observacion_validacion: Empresa revisada y aprobada por administración.
+      properties:
+        estado_validacion:
+          example: validada
+          type: string
+        observacion_validacion:
+          example: Empresa revisada y aprobada por administración.
+          type: string
+        validado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+      required:
+      - estado_validacion
+      type: object
+    EmpresasPaginadas:
+      example:
+        total: 8
+        data:
+        - tipo_empresa: Contratación directa
+          rubro: Tecnología
+          contactos_empresa: "RRHH principal: rrhh@empresa.cl, +56911112222"
+          direccion: Av. Nueva Providencia 1881
+          presentacion: Empresa dedicada al desarrollo de soluciones digitales.
+          estado_validacion: validada
+          validado_por: Administrador Departamento de Empleo
+          rut_empresa: 76123456-7
+          nombre_empresa: Servicios Digitales Providencia SpA
+          correo: contacto@empresa.cl
+          id: 1
+          telefono: "+56223456789"
+          observacion_validacion: Empresa aprobada para solicitar contacto con talentos.
+          beneficios: "Seguro complementario, modalidad híbrida, capacitación."
+          activo: true
+        - tipo_empresa: Contratación directa
+          rubro: Tecnología
+          contactos_empresa: "RRHH principal: rrhh@empresa.cl, +56911112222"
+          direccion: Av. Nueva Providencia 1881
+          presentacion: Empresa dedicada al desarrollo de soluciones digitales.
+          estado_validacion: validada
+          validado_por: Administrador Departamento de Empleo
+          rut_empresa: 76123456-7
+          nombre_empresa: Servicios Digitales Providencia SpA
+          correo: contacto@empresa.cl
+          id: 1
+          telefono: "+56223456789"
+          observacion_validacion: Empresa aprobada para solicitar contacto con talentos.
+          beneficios: "Seguro complementario, modalidad híbrida, capacitación."
+          activo: true
+        limit: 10
+        page: 1
+      properties:
+        page:
+          example: 1
+          type: integer
+        limit:
+          example: 10
+          type: integer
+        total:
+          example: 8
+          type: integer
+        data:
+          items:
+            $ref: "#/components/schemas/EmpresaCompleta"
+          type: array
+      type: object
+    SolicitudContactoCompleta:
+      example:
+        revisado_por: Administrador Departamento de Empleo
+        talento_id: 2
+        empresa_id: 1
+        codigo_talento: TAL-0002
+        fecha_revision: 2026-05-22T09:00:00Z
+        estado_solicitud: pendiente
+        id: 1
+        mensaje: Empresa solicita contactar al talento por perfil administrativo.
+        fecha_solicitud: 2026-05-21T10:30:00Z
+        respuesta_admin: "Solicitud aprobada, se inicia contacto intermediado."
+        activo: true
+      properties:
+        id:
+          example: 1
+          type: integer
+        empresa_id:
+          example: 1
+          type: integer
+        talento_id:
+          example: 2
+          type: integer
+        mensaje:
+          example: Empresa solicita contactar al talento por perfil administrativo.
+          type: string
+        estado_solicitud:
+          example: pendiente
+          type: string
+        fecha_solicitud:
+          example: 2026-05-21T10:30:00Z
+          format: date-time
+          type: string
+        respuesta_admin:
+          example: "Solicitud aprobada, se inicia contacto intermediado."
+          type: string
+        revisado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+        fecha_revision:
+          example: 2026-05-22T09:00:00Z
+          format: date-time
+          type: string
+        activo:
+          example: true
+          type: boolean
+      type: object
+    SolicitudContactoCreate:
+      example:
+        talento_id: 2
+        empresa_id: 1
+        mensaje: Solicitamos contactar a este talento por experiencia en atención
+          de público.
+      properties:
+        empresa_id:
+          example: 1
+          type: integer
+        talento_id:
+          example: 2
+          type: integer
+        mensaje:
+          example: Solicitamos contactar a este talento por experiencia en atención
+            de público.
+          type: string
+      required:
+      - empresa_id
+      - talento_id
+      type: object
+    SolicitudContactoUpdate:
+      allOf:
+      - $ref: "#/components/schemas/SolicitudContactoCreate"
+      - properties:
+          estado_solicitud:
+            example: aprobada
+            type: string
+          respuesta_admin:
+            example: Solicitud revisada por administración.
+            type: string
+          activo:
+            example: true
+            type: boolean
+        type: object
+      example:
+        talento_id: 2
+        empresa_id: 1
+        estado_solicitud: aprobada
+        mensaje: Solicitamos contactar a este talento por experiencia en atención
+          de público.
+        respuesta_admin: Solicitud revisada por administración.
+        activo: true
+    SolicitudEstadoPatch:
+      example:
+        revisado_por: Administrador Departamento de Empleo
+        estado_solicitud: aprobada
+        respuesta_admin: Solicitud aprobada para iniciar contacto.
+      properties:
+        estado_solicitud:
+          example: aprobada
+          type: string
+        respuesta_admin:
+          example: Solicitud aprobada para iniciar contacto.
+          type: string
+        revisado_por:
+          example: Administrador Departamento de Empleo
+          type: string
+      required:
+      - estado_solicitud
+      type: object
+    SolicitudesPaginadas:
+      example:
+        total: 12
+        data:
+        - revisado_por: Administrador Departamento de Empleo
+          talento_id: 2
+          empresa_id: 1
+          codigo_talento: TAL-0002
+          fecha_revision: 2026-05-22T09:00:00Z
+          estado_solicitud: pendiente
+          id: 1
+          mensaje: Empresa solicita contactar al talento por perfil administrativo.
+          fecha_solicitud: 2026-05-21T10:30:00Z
+          respuesta_admin: "Solicitud aprobada, se inicia contacto intermediado."
+          activo: true
+        - revisado_por: Administrador Departamento de Empleo
+          talento_id: 2
+          empresa_id: 1
+          codigo_talento: TAL-0002
+          fecha_revision: 2026-05-22T09:00:00Z
+          estado_solicitud: pendiente
+          id: 1
+          mensaje: Empresa solicita contactar al talento por perfil administrativo.
+          fecha_solicitud: 2026-05-21T10:30:00Z
+          respuesta_admin: "Solicitud aprobada, se inicia contacto intermediado."
+          activo: true
+        limit: 10
+        page: 1
+      properties:
+        page:
+          example: 1
+          type: integer
+        limit:
+          example: 10
+          type: integer
+        total:
+          example: 12
+          type: integer
+        data:
+          items:
+            $ref: "#/components/schemas/SolicitudContactoCompleta"
+          type: array
+      type: object
+    SeguimientoCompleto:
+      example:
+        talento_id: 2
+        empresa_id: 1
+        responsable_seguimiento: Profesional Departamento de Empleo
+        fecha_inicio: 2026-05-22T09:00:00Z
+        estado_seguimiento: entrevista
+        etapa: Entrevista inicial
+        fecha_actualizacion: 2026-05-23T11:00:00Z
+        id: 1
+        notas_internas: Empresa agenda entrevista para la próxima semana.
+        solicitud_contacto_id: 1
+        resultado_proceso: En proceso
+        activo: true
+      properties:
+        id:
+          example: 1
+          type: integer
+        solicitud_contacto_id:
+          example: 1
+          type: integer
+        empresa_id:
+          example: 1
+          type: integer
+        talento_id:
+          example: 2
+          type: integer
+        estado_seguimiento:
+          example: entrevista
+          type: string
+        etapa:
+          example: Entrevista inicial
+          type: string
+        notas_internas:
+          example: Empresa agenda entrevista para la próxima semana.
+          type: string
+        resultado_proceso:
+          example: En proceso
+          type: string
+        responsable_seguimiento:
+          example: Profesional Departamento de Empleo
+          type: string
+        fecha_inicio:
+          example: 2026-05-22T09:00:00Z
+          format: date-time
+          type: string
+        fecha_actualizacion:
+          example: 2026-05-23T11:00:00Z
+          format: date-time
+          type: string
+        activo:
+          example: true
+          type: boolean
+      type: object
+    SeguimientoCreate:
+      example:
+        responsable_seguimiento: Profesional Departamento de Empleo
+        estado_seguimiento: contactado
+        etapa: Primer contacto
+        notas_internas: Se contacta al talento para validar interés.
+        solicitud_contacto_id: 1
+        resultado_proceso: En proceso
+      properties:
+        solicitud_contacto_id:
+          example: 1
+          type: integer
+        estado_seguimiento:
+          example: contactado
+          type: string
+        etapa:
+          example: Primer contacto
+          type: string
+        notas_internas:
+          example: Se contacta al talento para validar interés.
+          type: string
+        resultado_proceso:
+          example: En proceso
+          type: string
+        responsable_seguimiento:
+          example: Profesional Departamento de Empleo
+          type: string
+      required:
+      - estado_seguimiento
+      - solicitud_contacto_id
+      type: object
+    SeguimientoUpdate:
+      allOf:
+      - $ref: "#/components/schemas/SeguimientoCreate"
+      - properties:
+          activo:
+            example: true
+            type: boolean
+        type: object
+      example:
+        responsable_seguimiento: Profesional Departamento de Empleo
+        estado_seguimiento: contactado
+        etapa: Primer contacto
+        notas_internas: Se contacta al talento para validar interés.
+        solicitud_contacto_id: 1
+        resultado_proceso: En proceso
+        activo: true
+    SeguimientoEstadoPatch:
+      example:
+        responsable_seguimiento: Profesional Departamento de Empleo
+        estado_seguimiento: seleccionado
+        etapa: Resultado final
+        notas_internas: Empresa informa selección del talento.
+        resultado_proceso: Seleccionado
+      properties:
+        estado_seguimiento:
+          example: seleccionado
+          type: string
+        etapa:
+          example: Resultado final
+          type: string
+        notas_internas:
+          example: Empresa informa selección del talento.
+          type: string
+        resultado_proceso:
+          example: Seleccionado
+          type: string
+        responsable_seguimiento:
+          example: Profesional Departamento de Empleo
+          type: string
+      required:
+      - estado_seguimiento
+      type: object
+    SeguimientosPaginados:
+      example:
+        total: 9
+        data:
+        - talento_id: 2
+          empresa_id: 1
+          responsable_seguimiento: Profesional Departamento de Empleo
+          fecha_inicio: 2026-05-22T09:00:00Z
+          estado_seguimiento: entrevista
+          etapa: Entrevista inicial
+          fecha_actualizacion: 2026-05-23T11:00:00Z
+          id: 1
+          notas_internas: Empresa agenda entrevista para la próxima semana.
+          solicitud_contacto_id: 1
+          resultado_proceso: En proceso
+          activo: true
+        - talento_id: 2
+          empresa_id: 1
+          responsable_seguimiento: Profesional Departamento de Empleo
+          fecha_inicio: 2026-05-22T09:00:00Z
+          estado_seguimiento: entrevista
+          etapa: Entrevista inicial
+          fecha_actualizacion: 2026-05-23T11:00:00Z
+          id: 1
+          notas_internas: Empresa agenda entrevista para la próxima semana.
+          solicitud_contacto_id: 1
+          resultado_proceso: En proceso
+          activo: true
+        limit: 10
+        page: 1
+      properties:
+        page:
+          example: 1
+          type: integer
+        limit:
+          example: 10
+          type: integer
+        total:
+          example: 9
+          type: integer
+        data:
+          items:
+            $ref: "#/components/schemas/SeguimientoCompleto"
+          type: array
+      type: object
+    CatalogoCompleto:
+      example:
+        descripcion: Perfil revisado y aprobado para aparecer en vitrina laboral.
+        tipo: estado_perfil
+        valor: validado
+        id: 1
+        nombre: Validado
+        activo: true
+      properties:
+        id:
+          example: 1
+          type: integer
+        tipo:
+          example: estado_perfil
+          type: string
+        nombre:
+          example: Validado
+          type: string
+        valor:
+          example: validado
+          type: string
+        descripcion:
+          example: Perfil revisado y aprobado para aparecer en vitrina laboral.
+          type: string
+        activo:
+          example: true
+          type: boolean
+      type: object
+    CatalogoCreate:
+      example:
+        descripcion: Modalidad de trabajo parcialmente presencial y remota.
+        tipo: modalidad
+        valor: hibrida
+        nombre: Híbrida
+      properties:
+        tipo:
+          example: modalidad
+          type: string
+        nombre:
+          example: Híbrida
+          type: string
+        valor:
+          example: hibrida
+          type: string
+        descripcion:
+          example: Modalidad de trabajo parcialmente presencial y remota.
+          type: string
+      required:
+      - nombre
+      - tipo
+      - valor
+      type: object
+    CatalogoUpdate:
+      allOf:
+      - $ref: "#/components/schemas/CatalogoCreate"
+      - properties:
+          activo:
+            example: true
+            type: boolean
+        type: object
+      example:
+        descripcion: Modalidad de trabajo parcialmente presencial y remota.
+        tipo: modalidad
+        valor: hibrida
+        nombre: Híbrida
+        activo: true
+    CatalogosPaginados:
+      example:
+        total: 30
+        data:
+        - descripcion: Perfil revisado y aprobado para aparecer en vitrina laboral.
+          tipo: estado_perfil
+          valor: validado
+          id: 1
+          nombre: Validado
+          activo: true
+        - descripcion: Perfil revisado y aprobado para aparecer en vitrina laboral.
+          tipo: estado_perfil
+          valor: validado
+          id: 1
+          nombre: Validado
+          activo: true
+        limit: 10
+        page: 1
+      properties:
+        page:
+          example: 1
+          type: integer
+        limit:
+          example: 10
+          type: integer
+        total:
+          example: 30
+          type: integer
+        data:
+          items:
+            $ref: "#/components/schemas/CatalogoCompleto"
+          type: array
+      type: object

@@ -1,0 +1,482 @@
+openapi: 3.0.3
+
+info:
+  title: ProviEmplea API
+  description: API backend para plataforma de intermediación laboral con búsqueda inversa y CV Ciego.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor local de desarrollo
+
+tags:
+  - name: Sistema
+    description: Estado general de la API
+  - name: Talentos
+    description: Gestión de perfiles laborales y CV Ciego
+
+paths:
+  /health:
+    get:
+      tags:
+        - Sistema
+      summary: Verifica el estado de la API
+      responses:
+        "200":
+          description: API funcionando correctamente
+          content:
+            application/json:
+              example:
+                status: ok
+                message: ProviEmplea API funcionando correctamente
+
+  /talentos:
+    get:
+      tags:
+        - Talentos
+      summary: Lista talentos aplicando CV Ciego
+      description: Retorna talentos visibles para empresas, ocultando datos personales como nombre, rut, correo, teléfono, dirección, fecha de nacimiento, género y comuna.
+      parameters:
+        - name: estado_perfil
+          in: query
+          required: false
+          schema:
+            type: string
+            example: validado
+        - name: area_profesional
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Tecnología
+        - name: discapacidad_ley_21015
+          in: query
+          required: false
+          schema:
+            type: boolean
+            example: true
+        - name: pretension_renta_max
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 900000
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 10
+      responses:
+        "200":
+          description: Lista de talentos obtenida correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentosPaginados"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Talentos
+      summary: Crea un nuevo talento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoCreate"
+      responses:
+        "201":
+          description: Talento creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Ya existe un talento con ese correo o rut
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /talentos/{id}:
+    get:
+      tags:
+        - Talentos
+      summary: Obtiene un talento por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Talento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Talentos
+      summary: Actualiza completamente un talento
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoUpdate"
+      responses:
+        "200":
+          description: Talento actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Talentos
+      summary: Elimina lógicamente un talento
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        "200":
+          description: Talento eliminado o desactivado correctamente
+          content:
+            application/json:
+              example:
+                status: ok
+                message: Talento eliminado correctamente
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /talentos/{id}/estado:
+    patch:
+      tags:
+        - Talentos
+      summary: Cambia el estado del perfil de un talento
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                estado_perfil:
+                  type: string
+                  example: validado
+                observacion_validacion:
+                  type: string
+                  example: Perfil revisado y aprobado para vitrina laboral.
+                validado_por:
+                  type: string
+                  example: Administrador Departamento de Empleo
+      responses:
+        "200":
+          description: Estado actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "400":
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    TalentoCompleto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_talento:
+          type: string
+          example: TAL-0001
+        rut:
+          type: string
+          example: 12345678-9
+        nombre:
+          type: string
+          example: Camila Torres
+        correo:
+          type: string
+          example: camila@example.com
+        telefono:
+          type: string
+          example: "+56912345678"
+        direccion:
+          type: string
+          example: Av. Providencia 1234
+        fecha_nacimiento:
+          type: string
+          format: date
+          example: 1995-05-10
+        genero:
+          type: string
+          example: Femenino
+        comuna:
+          type: string
+          example: Providencia
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público y gestión administrativa.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente, gestión documental.
+        idiomas:
+          type: string
+          example: Inglés nivel intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+        estado_perfil:
+          type: string
+          example: validado
+        porcentaje_completitud:
+          type: integer
+          example: 90
+        activo:
+          type: boolean
+          example: true
+
+    TalentoCiego:
+      type: object
+      description: Versión del talento visible para empresas, sin datos personales ni sociodemográficos.
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_talento:
+          type: string
+          example: TAL-0001
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público y gestión administrativa.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente, gestión documental.
+        idiomas:
+          type: string
+          example: Inglés nivel intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+        estado_perfil:
+          type: string
+          example: validado
+
+    TalentoCreate:
+      type: object
+      required:
+        - rut
+        - nombre
+        - correo
+        - resumen_profesional
+        - area_profesional
+      properties:
+        rut:
+          type: string
+          example: 12345678-9
+        nombre:
+          type: string
+          example: Camila Torres
+        correo:
+          type: string
+          example: camila@example.com
+        telefono:
+          type: string
+          example: "+56912345678"
+        direccion:
+          type: string
+          example: Av. Providencia 1234
+        fecha_nacimiento:
+          type: string
+          format: date
+          example: 1995-05-10
+        genero:
+          type: string
+          example: Femenino
+        comuna:
+          type: string
+          example: Providencia
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente.
+        idiomas:
+          type: string
+          example: Inglés intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+
+    TalentoUpdate:
+      allOf:
+        - $ref: "#/components/schemas/TalentoCreate"
+        - type: object
+          properties:
+            estado_perfil:
+              type: string
+              example: validado
+            porcentaje_completitud:
+              type: integer
+              example: 90
+            activo:
+              type: boolean
+              example: true
+
+    TalentosPaginados:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 25
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TalentoCiego"
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Ocurrió un error en la solicitud

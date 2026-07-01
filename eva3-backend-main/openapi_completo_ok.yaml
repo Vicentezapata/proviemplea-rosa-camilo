@@ -1,0 +1,1836 @@
+openapi: 3.0.3
+
+info:
+  title: ProviEmplea API
+  description: >
+    API backend para plataforma de intermediación laboral con búsqueda inversa,
+    CV Ciego, gestión de empresas, solicitudes de contacto y seguimiento de procesos.
+    La API considera paginación, filtros y manejo de errores para optimizar las operaciones CRUD.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor local de desarrollo
+
+tags:
+  - name: Sistema
+    description: Estado general de la API
+  - name: Talentos
+    description: Gestión de perfiles laborales y CV Ciego
+  - name: Empresas
+    description: Gestión de empresas registradas y validadas
+  - name: Solicitudes
+    description: Solicitudes de contacto entre empresas y talentos
+  - name: Seguimientos
+    description: Seguimiento de procesos de selección
+  - name: Catalogos
+    description: Opciones reutilizables del sistema
+
+paths:
+  /health:
+    get:
+      tags:
+        - Sistema
+      operationId: getHealth
+      summary: Verifica el estado de la API
+      responses:
+        "200":
+          description: API funcionando correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: ProviEmplea API funcionando correctamente
+
+  /talentos:
+    get:
+      tags:
+        - Talentos
+      operationId: listarTalentos
+      summary: Lista talentos aplicando CV Ciego
+      description: >
+        Retorna talentos visibles para empresas, ocultando datos personales y sociodemográficos
+        como nombre, rut, correo, teléfono, dirección, fecha de nacimiento, género y comuna.
+        Incluye filtros y paginación para mejorar rendimiento.
+      parameters:
+        - name: estado_perfil
+          in: query
+          required: false
+          schema:
+            type: string
+            example: validado
+        - name: area_profesional
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Tecnología
+        - name: discapacidad_ley_21015
+          in: query
+          required: false
+          schema:
+            type: boolean
+            example: true
+        - name: pretension_renta_max
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 900000
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            example: 10
+      responses:
+        "200":
+          description: Lista de talentos obtenida correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentosPaginados"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Talentos
+      operationId: crearTalento
+      summary: Crea un nuevo talento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoCreate"
+      responses:
+        "201":
+          description: Talento creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Ya existe un talento con ese correo o rut
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /talentos/{id}:
+    get:
+      tags:
+        - Talentos
+      operationId: obtenerTalentoPorId
+      summary: Obtiene un talento por ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Talento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Talentos
+      operationId: actualizarTalento
+      summary: Actualiza completamente un talento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoUpdate"
+      responses:
+        "200":
+          description: Talento actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Talentos
+      operationId: eliminarTalento
+      summary: Elimina lógicamente un talento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Talento eliminado o desactivado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: Talento eliminado correctamente
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /talentos/{id}/estado:
+    patch:
+      tags:
+        - Talentos
+      operationId: cambiarEstadoTalento
+      summary: Cambia el estado del perfil de un talento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TalentoEstadoPatch"
+      responses:
+        "200":
+          description: Estado actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TalentoCompleto"
+        "400":
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /empresas:
+    get:
+      tags:
+        - Empresas
+      operationId: listarEmpresas
+      summary: Lista empresas registradas
+      description: Retorna empresas con filtros por estado de validación, rubro y paginación.
+      parameters:
+        - name: estado_validacion
+          in: query
+          required: false
+          schema:
+            type: string
+            example: validada
+        - name: rubro
+          in: query
+          required: false
+          schema:
+            type: string
+            example: Tecnología
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            example: 10
+      responses:
+        "200":
+          description: Empresas obtenidas correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresasPaginadas"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Empresas
+      operationId: crearEmpresa
+      summary: Crea una nueva empresa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaCreate"
+      responses:
+        "201":
+          description: Empresa creada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Ya existe una empresa con ese RUT o correo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /empresas/{id}:
+    get:
+      tags:
+        - Empresas
+      operationId: obtenerEmpresaPorId
+      summary: Obtiene una empresa por ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Empresa encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+        "404":
+          description: Empresa no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Empresas
+      operationId: actualizarEmpresa
+      summary: Actualiza completamente una empresa
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaUpdate"
+      responses:
+        "200":
+          description: Empresa actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Empresa no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Empresas
+      operationId: eliminarEmpresa
+      summary: Elimina lógicamente una empresa
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Empresa eliminada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: Empresa eliminada correctamente
+        "404":
+          description: Empresa no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /empresas/{id}/validacion:
+    patch:
+      tags:
+        - Empresas
+      operationId: cambiarValidacionEmpresa
+      summary: Cambia el estado de validación de una empresa
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmpresaValidacionPatch"
+      responses:
+        "200":
+          description: Validación actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmpresaCompleta"
+        "400":
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Empresa no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /solicitudes:
+    get:
+      tags:
+        - Solicitudes
+      operationId: listarSolicitudes
+      summary: Lista solicitudes de contacto
+      description: Retorna solicitudes con filtros por empresa, talento, estado y paginación.
+      parameters:
+        - name: empresa_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: talento_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 2
+        - name: estado_solicitud
+          in: query
+          required: false
+          schema:
+            type: string
+            example: pendiente
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            example: 10
+      responses:
+        "200":
+          description: Solicitudes obtenidas correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudesPaginadas"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Solicitudes
+      operationId: crearSolicitud
+      summary: Crea una solicitud de contacto de empresa hacia talento
+      description: No permite solicitud pendiente duplicada para la misma empresa y talento.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudContactoCreate"
+      responses:
+        "201":
+          description: Solicitud creada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Empresa o talento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Ya existe una solicitud pendiente para esa empresa y talento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /solicitudes/{id}:
+    get:
+      tags:
+        - Solicitudes
+      operationId: obtenerSolicitudPorId
+      summary: Obtiene una solicitud por ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Solicitud encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Solicitudes
+      operationId: actualizarSolicitud
+      summary: Actualiza completamente una solicitud
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudContactoUpdate"
+      responses:
+        "200":
+          description: Solicitud actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Solicitudes
+      operationId: eliminarSolicitud
+      summary: Elimina lógicamente una solicitud
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Solicitud eliminada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: Solicitud eliminada correctamente
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /solicitudes/{id}/estado:
+    patch:
+      tags:
+        - Solicitudes
+      operationId: cambiarEstadoSolicitud
+      summary: Cambia el estado de una solicitud de contacto
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudEstadoPatch"
+      responses:
+        "200":
+          description: Estado de solicitud actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SolicitudContactoCompleta"
+        "400":
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /seguimientos:
+    get:
+      tags:
+        - Seguimientos
+      operationId: listarSeguimientos
+      summary: Lista seguimientos de procesos de selección
+      parameters:
+        - name: solicitud_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: estado_seguimiento
+          in: query
+          required: false
+          schema:
+            type: string
+            example: entrevista
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            example: 10
+      responses:
+        "200":
+          description: Seguimientos obtenidos correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientosPaginados"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Seguimientos
+      operationId: crearSeguimiento
+      summary: Crea un seguimiento asociado a una solicitud
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoCreate"
+      responses:
+        "201":
+          description: Seguimiento creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /seguimientos/{id}:
+    get:
+      tags:
+        - Seguimientos
+      operationId: obtenerSeguimientoPorId
+      summary: Obtiene un seguimiento por ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Seguimiento encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+        "404":
+          description: Seguimiento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Seguimientos
+      operationId: actualizarSeguimiento
+      summary: Actualiza completamente un seguimiento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoUpdate"
+      responses:
+        "200":
+          description: Seguimiento actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Seguimiento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Seguimientos
+      operationId: eliminarSeguimiento
+      summary: Elimina lógicamente un seguimiento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Seguimiento eliminado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: Seguimiento eliminado correctamente
+        "404":
+          description: Seguimiento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /seguimientos/{id}/estado:
+    patch:
+      tags:
+        - Seguimientos
+      operationId: cambiarEstadoSeguimiento
+      summary: Cambia el estado o etapa de un seguimiento
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SeguimientoEstadoPatch"
+      responses:
+        "200":
+          description: Estado de seguimiento actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SeguimientoCompleto"
+        "400":
+          description: Estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Seguimiento no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /catalogos:
+    get:
+      tags:
+        - Catalogos
+      operationId: listarCatalogos
+      summary: Lista catálogos del sistema
+      description: Permite obtener opciones reutilizables como estados, rubros, modalidades, jornadas, idiomas y roles.
+      parameters:
+        - name: tipo
+          in: query
+          required: false
+          schema:
+            type: string
+            example: estado_perfil
+        - name: activo
+          in: query
+          required: false
+          schema:
+            type: boolean
+            example: true
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+            example: 10
+      responses:
+        "200":
+          description: Catálogos obtenidos correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogosPaginados"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Catalogos
+      operationId: crearCatalogo
+      summary: Crea un nuevo registro de catálogo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogoCreate"
+      responses:
+        "201":
+          description: Catálogo creado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Ya existe un catálogo con ese tipo y nombre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /catalogos/{id}:
+    get:
+      tags:
+        - Catalogos
+      operationId: obtenerCatalogoPorId
+      summary: Obtiene un catálogo por ID
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Catálogo encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+        "404":
+          description: Catálogo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Catalogos
+      operationId: actualizarCatalogo
+      summary: Actualiza completamente un catálogo
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogoUpdate"
+      responses:
+        "200":
+          description: Catálogo actualizado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogoCompleto"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Catálogo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Catalogos
+      operationId: eliminarCatalogo
+      summary: Elimina lógicamente un catálogo
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Catálogo eliminado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+              example:
+                status: ok
+                message: Catálogo eliminado correctamente
+        "404":
+          description: Catálogo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 1
+
+  schemas:
+    MensajeRespuesta:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        message:
+          type: string
+          example: Operación realizada correctamente
+
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Ocurrió un error en la solicitud
+
+    TalentoCompleto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_talento:
+          type: string
+          example: TAL-0001
+        rut:
+          type: string
+          example: 12345678-9
+        nombre:
+          type: string
+          example: Camila Torres
+        correo:
+          type: string
+          example: camila@example.com
+        telefono:
+          type: string
+          example: "+56912345678"
+        direccion:
+          type: string
+          example: Av. Providencia 1234
+        fecha_nacimiento:
+          type: string
+          format: date
+          example: 1995-05-10
+        genero:
+          type: string
+          example: Femenino
+        comuna:
+          type: string
+          example: Providencia
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público y gestión administrativa.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente, gestión documental.
+        idiomas:
+          type: string
+          example: Inglés nivel intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+        estado_perfil:
+          type: string
+          example: validado
+        porcentaje_completitud:
+          type: integer
+          example: 90
+        observacion_validacion:
+          type: string
+          example: Perfil aprobado para vitrina laboral.
+        validado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+        activo:
+          type: boolean
+          example: true
+
+    TalentoCiego:
+      type: object
+      description: Versión del talento visible para empresas, sin datos personales ni sociodemográficos.
+      properties:
+        id:
+          type: integer
+          example: 1
+        codigo_talento:
+          type: string
+          example: TAL-0001
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público y gestión administrativa.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente, gestión documental.
+        idiomas:
+          type: string
+          example: Inglés nivel intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+        estado_perfil:
+          type: string
+          example: validado
+
+    TalentoCreate:
+      type: object
+      required:
+        - rut
+        - nombre
+        - correo
+        - resumen_profesional
+        - area_profesional
+      properties:
+        rut:
+          type: string
+          example: 12345678-9
+        nombre:
+          type: string
+          example: Camila Torres
+        correo:
+          type: string
+          example: camila@example.com
+        telefono:
+          type: string
+          example: "+56912345678"
+        direccion:
+          type: string
+          example: Av. Providencia 1234
+        fecha_nacimiento:
+          type: string
+          format: date
+          example: 1995-05-10
+        genero:
+          type: string
+          example: Femenino
+        comuna:
+          type: string
+          example: Providencia
+        resumen_profesional:
+          type: string
+          example: Profesional con experiencia en atención de clientes y administración.
+        area_profesional:
+          type: string
+          example: Administración
+        nivel_educacional:
+          type: string
+          example: Técnico nivel superior
+        experiencia_laboral:
+          type: string
+          example: 3 años en atención de público.
+        competencias_tecnicas:
+          type: string
+          example: Excel, atención al cliente.
+        idiomas:
+          type: string
+          example: Inglés intermedio.
+        portafolio_url:
+          type: string
+          example: https://portafolio.example.com/talento1
+        discapacidad_ley_21015:
+          type: boolean
+          example: true
+        condiciones_laborales:
+          type: string
+          example: Jornada completa, modalidad híbrida.
+        pretension_renta:
+          type: integer
+          example: 800000
+
+    TalentoUpdate:
+      allOf:
+        - $ref: "#/components/schemas/TalentoCreate"
+        - type: object
+          properties:
+            estado_perfil:
+              type: string
+              example: validado
+            porcentaje_completitud:
+              type: integer
+              example: 90
+            observacion_validacion:
+              type: string
+              example: Perfil revisado y validado.
+            activo:
+              type: boolean
+              example: true
+
+    TalentoEstadoPatch:
+      type: object
+      required:
+        - estado_perfil
+      properties:
+        estado_perfil:
+          type: string
+          example: validado
+        observacion_validacion:
+          type: string
+          example: Perfil revisado y aprobado para vitrina laboral.
+        validado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+
+    TalentosPaginados:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 25
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TalentoCiego"
+
+    EmpresaCompleta:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        rut_empresa:
+          type: string
+          example: 76123456-7
+        nombre_empresa:
+          type: string
+          example: Servicios Digitales Providencia SpA
+        correo:
+          type: string
+          example: contacto@empresa.cl
+        telefono:
+          type: string
+          example: "+56223456789"
+        direccion:
+          type: string
+          example: Av. Nueva Providencia 1881
+        rubro:
+          type: string
+          example: Tecnología
+        tipo_empresa:
+          type: string
+          example: Contratación directa
+        presentacion:
+          type: string
+          example: Empresa dedicada al desarrollo de soluciones digitales.
+        beneficios:
+          type: string
+          example: Seguro complementario, modalidad híbrida, capacitación.
+        contactos_empresa:
+          type: string
+          example: "RRHH principal: rrhh@empresa.cl, +56911112222"
+        estado_validacion:
+          type: string
+          example: validada
+        observacion_validacion:
+          type: string
+          example: Empresa aprobada para solicitar contacto con talentos.
+        validado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+        activo:
+          type: boolean
+          example: true
+
+    EmpresaCreate:
+      type: object
+      required:
+        - rut_empresa
+        - nombre_empresa
+        - correo
+        - rubro
+      properties:
+        rut_empresa:
+          type: string
+          example: 76123456-7
+        nombre_empresa:
+          type: string
+          example: Servicios Digitales Providencia SpA
+        correo:
+          type: string
+          example: contacto@empresa.cl
+        telefono:
+          type: string
+          example: "+56223456789"
+        direccion:
+          type: string
+          example: Av. Nueva Providencia 1881
+        rubro:
+          type: string
+          example: Tecnología
+        tipo_empresa:
+          type: string
+          example: Contratación directa
+        presentacion:
+          type: string
+          example: Empresa dedicada al desarrollo de soluciones digitales.
+        beneficios:
+          type: string
+          example: Seguro complementario, modalidad híbrida, capacitación.
+        contactos_empresa:
+          type: string
+          example: "RRHH principal: rrhh@empresa.cl, +56911112222"
+
+    EmpresaUpdate:
+      allOf:
+        - $ref: "#/components/schemas/EmpresaCreate"
+        - type: object
+          properties:
+            estado_validacion:
+              type: string
+              example: validada
+            observacion_validacion:
+              type: string
+              example: Empresa revisada por administración.
+            activo:
+              type: boolean
+              example: true
+
+    EmpresaValidacionPatch:
+      type: object
+      required:
+        - estado_validacion
+      properties:
+        estado_validacion:
+          type: string
+          example: validada
+        observacion_validacion:
+          type: string
+          example: Empresa revisada y aprobada por administración.
+        validado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+
+    EmpresasPaginadas:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 8
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmpresaCompleta"
+
+    SolicitudContactoCompleta:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        empresa_id:
+          type: integer
+          example: 1
+        talento_id:
+          type: integer
+          example: 2
+        codigo_talento:
+          type: string
+          example: TAL-0002
+        mensaje:
+          type: string
+          example: Empresa solicita contactar al talento por perfil administrativo.
+        estado_solicitud:
+          type: string
+          example: pendiente
+        fecha_solicitud:
+          type: string
+          format: date-time
+          example: 2026-05-21T10:30:00Z
+        respuesta_admin:
+          type: string
+          example: Solicitud aprobada, se inicia contacto intermediado.
+        revisado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+        fecha_revision:
+          type: string
+          format: date-time
+          example: 2026-05-22T09:00:00Z
+        activo:
+          type: boolean
+          example: true
+
+    SolicitudContactoCreate:
+      type: object
+      required:
+        - empresa_id
+        - talento_id
+      properties:
+        empresa_id:
+          type: integer
+          example: 1
+        talento_id:
+          type: integer
+          example: 2
+        mensaje:
+          type: string
+          example: Solicitamos contactar a este talento por experiencia en atención de público.
+
+    SolicitudContactoUpdate:
+      allOf:
+        - $ref: "#/components/schemas/SolicitudContactoCreate"
+        - type: object
+          properties:
+            estado_solicitud:
+              type: string
+              example: aprobada
+            respuesta_admin:
+              type: string
+              example: Solicitud revisada por administración.
+            activo:
+              type: boolean
+              example: true
+
+    SolicitudEstadoPatch:
+      type: object
+      required:
+        - estado_solicitud
+      properties:
+        estado_solicitud:
+          type: string
+          example: aprobada
+        respuesta_admin:
+          type: string
+          example: Solicitud aprobada para iniciar contacto.
+        revisado_por:
+          type: string
+          example: Administrador Departamento de Empleo
+
+    SolicitudesPaginadas:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 12
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SolicitudContactoCompleta"
+
+    SeguimientoCompleto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        solicitud_id:
+          type: integer
+          example: 1
+        empresa_id:
+          type: integer
+          example: 1
+        talento_id:
+          type: integer
+          example: 2
+        estado_seguimiento:
+          type: string
+          example: entrevista
+        etapa:
+          type: string
+          example: Entrevista inicial
+        notas_internas:
+          type: string
+          example: Empresa agenda entrevista para la próxima semana.
+        resultado_proceso:
+          type: string
+          example: En proceso
+        responsable_seguimiento:
+          type: string
+          example: Profesional Departamento de Empleo
+        fecha_inicio:
+          type: string
+          format: date-time
+          example: 2026-05-22T09:00:00Z
+        fecha_actualizacion:
+          type: string
+          format: date-time
+          example: 2026-05-23T11:00:00Z
+        activo:
+          type: boolean
+          example: true
+
+    SeguimientoCreate:
+      type: object
+      required:
+        - solicitud_id
+        - estado_seguimiento
+      properties:
+        solicitud_id:
+          type: integer
+          example: 1
+        estado_seguimiento:
+          type: string
+          example: contactado
+        etapa:
+          type: string
+          example: Primer contacto
+        notas_internas:
+          type: string
+          example: Se contacta al talento para validar interés.
+        resultado_proceso:
+          type: string
+          example: En proceso
+        responsable_seguimiento:
+          type: string
+          example: Profesional Departamento de Empleo
+
+    SeguimientoUpdate:
+      allOf:
+        - $ref: "#/components/schemas/SeguimientoCreate"
+        - type: object
+          properties:
+            activo:
+              type: boolean
+              example: true
+
+    SeguimientoEstadoPatch:
+      type: object
+      required:
+        - estado_seguimiento
+      properties:
+        estado_seguimiento:
+          type: string
+          example: seleccionado
+        etapa:
+          type: string
+          example: Resultado final
+        notas_internas:
+          type: string
+          example: Empresa informa selección del talento.
+        resultado_proceso:
+          type: string
+          example: Seleccionado
+        responsable_seguimiento:
+          type: string
+          example: Profesional Departamento de Empleo
+
+    SeguimientosPaginados:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 9
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SeguimientoCompleto"
+
+    CatalogoCompleto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        tipo:
+          type: string
+          example: estado_perfil
+        nombre:
+          type: string
+          example: Validado
+        valor:
+          type: string
+          example: validado
+        descripcion:
+          type: string
+          example: Perfil revisado y aprobado para aparecer en vitrina laboral.
+        activo:
+          type: boolean
+          example: true
+
+    CatalogoCreate:
+      type: object
+      required:
+        - tipo
+        - nombre
+        - valor
+      properties:
+        tipo:
+          type: string
+          example: modalidad
+        nombre:
+          type: string
+          example: Híbrida
+        valor:
+          type: string
+          example: hibrida
+        descripcion:
+          type: string
+          example: Modalidad de trabajo parcialmente presencial y remota.
+
+    CatalogoUpdate:
+      allOf:
+        - $ref: "#/components/schemas/CatalogoCreate"
+        - type: object
+          properties:
+            activo:
+              type: boolean
+              example: true
+
+    CatalogosPaginados:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 30
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogoCompleto"

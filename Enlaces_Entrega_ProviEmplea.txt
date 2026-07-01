@@ -1,0 +1,11 @@
+ENLACES DE ENTREGA - PROYECTO PROVIEMPLEA
+
+Repositorio GitHub:
+https://github.com/ipss1405/Eva3_Rosa_Camilo_-Frontend_Backend
+
+Wiki del proyecto:
+https://github.com/ipss1405/Eva3_Rosa_Camilo_-Frontend_Backend/wiki
+
+Observación:
+El repositorio contiene el backend y frontend del sistema.
+La Wiki contiene la documentación del proyecto, instalación, ejecución, backend, frontend, base de datos, CV Ciego, pruebas realizadas, mejoras futuras y conclusión final.

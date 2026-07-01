@@ -1,0 +1,8 @@
+node_modules
+src/node_modules
+.env
+*.log
+src/combined.log
+src/error.log
+src/uploaded_files
+.DS_Store
