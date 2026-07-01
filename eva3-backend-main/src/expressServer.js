@@ -34,10 +34,16 @@ class ExpressServer {
   }
 
   setupMiddleware() {
-    // Configurar CORS: en producción acepta el dominio de Vercel configurado en env
-    const allowedOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',')
-      : ['http://localhost:5173', 'http://localhost:4173'];
+    // Configurar CORS: siempre incluye Vercel y localhost; se puede extender con CORS_ORIGIN
+    const defaultOrigins = [
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'https://proviemplea-rosa-camilo.vercel.app',
+    ];
+    const extraOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : [];
+    const allowedOrigins = [...defaultOrigins, ...extraOrigins];
 
     this.app.use(cors({
       origin: function (origin, callback) {
